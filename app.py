@@ -1,23 +1,22 @@
 # точка входа
+
 import os
 import asyncio
 from aiogram import Bot, Dispatcher, types
-# импортируем класс для форматирования текста
-from aiogram.enums import ParseMode
-# импортируем класс для настроек бота
-from aiogram.client.default import DefaultBotProperties
-
+from aiogram.enums import ParseMode  # импортируем класс для форматирования текста
+from aiogram.client.default import DefaultBotProperties  # импортируем класс для настроек бота
+import aiohttp  # Асинхронная библиотека для HTTP-запросов
 # библиотеки для автоматического нахождения нашего файла dotenv и его загрузки
 from dotenv import find_dotenv, load_dotenv
 
 load_dotenv(find_dotenv())
 
 # наши импорты
-# импортируем наш роутер для обработки событий в личке
-from handlers.user_private import user_private_router
-
-# импортируем наши команды для бота (private - для личных сообщений)
-from common.bot_cmds_list import private
+from handlers.user_private import user_private_router  # импортируем наш роутер для обработки событий в личке
+from common.bot_cmds_list import private  # импортируем наши команды для бота (private - для личных сообщений)
+from actions.private import status_monitor  # импортируем наш модуль для отслеживания статуса пользователя
+# импортируем глобальные переменные
+from singleton import global_vars
 
 # указываем какие именно изменения отслеживаем у сервера telegram
 ALLOWED_UPDATES = ['message, edited_message']
@@ -35,14 +34,23 @@ dp.include_routers(user_private_router)
 async def main():
     """Метод запуска бота"""
 
-    # отвечаем только, когда бот онлайн
-    await bot.delete_webhook(drop_pending_updates=True)
-    # удалить все наши команды для лички
-    # await bot.delete_my_commands(scope=types.BotCommandScopeAllPrivateChats())
-    # отправляем все наши команды, которые будут у бота (только в личке)
-    await bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())
-    # слушаем сервер telegram и постоянно спрашиваем его про наличие каких-то изменений
-    await dp.start_polling(bot, allowed_updates=ALLOWED_UPDATES)
+    # Глобальная сессия aiohttp для всех API-запросов
+    session = aiohttp.ClientSession()
+    global_vars.session = session  # Устанавливаем глобальную сессию
+    try:
+        # отвечаем только, когда бот онлайн
+        await bot.delete_webhook(drop_pending_updates=True)
+        # удалить все наши команды для лички
+        # await bot.delete_my_commands(scope=types.BotCommandScopeAllPrivateChats())
+        # отправляем все наши команды, которые будут у бота (только в личке)
+        await bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())
+        # Запускаем фоновую задачу для проверки статуса VK
+        asyncio.create_task(status_monitor.monitoring_vk_user(bot=bot))
+        # слушаем сервер telegram и постоянно спрашиваем его про наличие каких-то изменений
+        await dp.start_polling(bot, allowed_updates=ALLOWED_UPDATES)
+    finally:
+        # Закрываем сессию при завершении работы
+        await session.close()
 
 
 # запускаем нашу функцию main
