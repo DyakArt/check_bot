@@ -24,9 +24,6 @@ from actions.private import status_monitor
 # импортируем глобальные переменные
 from singleton import global_vars
 
-
-
-
 # создаем отдельный роутер для сообщений лички
 user_private_router = Router()
 # подключаем фильтр для определения, где будет работать роутер (в личке, в группе, супергруппе)

@@ -13,7 +13,6 @@ async def monitoring_vk_user(bot):
     """Асинхронный метод отслеживающий онлайн пользователя ВК"""
     while True:
         current_time = datetime.now().strftime('%d-%m-%Y %H:%M')
-        print("Отслеживаемые пользователи:", global_vars.subscribers_vk)
         for user_id, vk_user_ids in global_vars.subscribers_vk.items():
             for vk_user_id in vk_user_ids:
                 user_info = await check_online_vk(vk_user_id, global_vars.session)

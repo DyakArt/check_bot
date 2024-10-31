@@ -9,6 +9,11 @@ from datetime import datetime
 # библиотеки для автоматического нахождения нашего файла dotenv и его загрузки
 from dotenv import find_dotenv, load_dotenv
 import asyncio
+import logging
+
+# Настраиваем логгер
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 load_dotenv(find_dotenv())
 
@@ -32,8 +37,13 @@ async def get_request(session, method, user_id, fields: str, retries=3):
     timeout = ClientTimeout(total=10)  # устанавливаем 10 секунд на запрос
     # пытаемся отправить запрос
     for attempt in range(retries):
-        async with session.get(url, params=params, timeout=timeout) as response:
-            return await response.json()
+        try:
+            async with session.get(url, params=params, timeout=timeout) as response:
+                return await response.json()
+        except asyncio.TimeoutError:
+            logger.warning(f"Тайм-аут при запросе к {url}, попытка {attempt + 1} из {retries}")
+        except Exception as e:
+            logger.error(f"Ошибка при выполнении запроса: {e}")
     return None
 
 
